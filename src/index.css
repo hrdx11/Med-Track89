@@ -1,0 +1,232 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Theme - Dawn Mint / Calm Sky */
+    --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 50%, #eff6ff 100%);
+    --glass-bg: rgba(255, 255, 255, 0.68);
+    --glass-bg-hover: rgba(255, 255, 255, 0.82);
+    --glass-bg-active: rgba(255, 255, 255, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --glass-border-subtle: rgba(255, 255, 255, 0.4);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --glass-shadow-lg: 0 16px 48px 0 rgba(31, 38, 135, 0.12);
+    --glass-blur: 20px;
+    --glass-modal-blur: 28px;
+    
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --card-surface: rgba(255, 255, 255, 0.75);
+    
+    /* Healthcare Accent Tokens */
+    --teal-primary: #0d9488;
+    --teal-hover: #0f766e;
+    --teal-light: #ccfbf1;
+    --teal-text: #115e59;
+
+    --amber-due: #d97706;
+    --amber-light: #fef3c7;
+    --red-missed: #e11d48;
+    --red-light: #ffe4e6;
+    --blue-info: #0284c7;
+    --blue-light: #e0f2fe;
+    --emerald-taken: #059669;
+    --emerald-light: #d1fae5;
+  }
+
+  /* Dusk Theme (Dark Mode) */
+  .dark {
+    --bg-gradient: linear-gradient(135deg, #090d16 0%, #0f172a 50%, #111827 100%);
+    --glass-bg: rgba(15, 23, 42, 0.72);
+    --glass-bg-hover: rgba(30, 41, 59, 0.85);
+    --glass-bg-active: rgba(30, 41, 59, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-border-subtle: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+    --glass-shadow-lg: 0 16px 48px 0 rgba(0, 0, 0, 0.55);
+    --glass-blur: 24px;
+    
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --card-surface: rgba(15, 23, 42, 0.8);
+    
+    --teal-primary: #14b8a6;
+    --teal-hover: #2dd4bf;
+    --teal-light: rgba(20, 184, 166, 0.18);
+    --teal-text: #5eead4;
+
+    --amber-due: #f59e0b;
+    --amber-light: rgba(245, 158, 11, 0.18);
+    --red-missed: #f43f5e;
+    --red-light: rgba(244, 63, 94, 0.18);
+    --blue-info: #38bdf8;
+    --blue-light: rgba(56, 189, 248, 0.18);
+    --emerald-taken: #10b981;
+    --emerald-light: rgba(16, 185, 129, 0.18);
+  }
+
+  /* Large Text & High Contrast Accessibility Mode */
+  .accessibility-mode {
+    --glass-blur: 0px !important;
+    --glass-modal-blur: 0px !important;
+    --glass-bg: #ffffff !important;
+    --glass-bg-hover: #f8fafc !important;
+    --glass-border: #0f172a !important;
+    --glass-border-subtle: #334155 !important;
+    --glass-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15) !important;
+    --text-primary: #000000 !important;
+    --text-secondary: #0f172a !important;
+    --text-muted: #334155 !important;
+    --card-surface: #ffffff !important;
+    font-size: 118% !important;
+  }
+
+  .dark.accessibility-mode {
+    --glass-bg: #090d16 !important;
+    --glass-bg-hover: #111827 !important;
+    --glass-border: #f8fafc !important;
+    --glass-border-subtle: #cbd5e1 !important;
+    --text-primary: #ffffff !important;
+    --text-secondary: #f1f5f9 !important;
+    --text-muted: #cbd5e1 !important;
+    --card-surface: #0f172a !important;
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  transition: background 0.3s ease, color 0.2s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+/* Glassmorphism utility classes */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--glass-border);
+}
+
+.glass-card-interactive:hover {
+  background: var(--glass-bg-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--glass-shadow-lg);
+}
+
+.glass-modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-modal-blur));
+  -webkit-backdrop-filter: blur(var(--glass-modal-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.35);
+  border-radius: 1.5rem;
+}
+
+.glass-pill {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border-subtle);
+  border-radius: 9999px;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* Keyframe Animations */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(13, 148, 136, 0);
+  }
+}
+
+@keyframes sosPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 16px rgba(225, 29, 72, 0);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes floatSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.animate-sos-pulse {
+  animation: sosPulse 1.5s infinite ease-in-out;
+}
+
+.animate-float-subtle {
+  animation: floatSubtle 3s ease-in-out infinite;
+}
+
+/* Print Stylesheet for Doctor Adherence Reports */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .glass-card, .glass-modal {
+    background: #ffffff !important;
+    border: 1px solid #cccccc !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+}
