@@ -17,12 +17,14 @@ import {
   CornerDownLeft,
   CornerDownRight,
   CornerUpRight,
-  CornerUpLeft
+  CornerUpLeft,
+  Settings2,
+  Sliders
 } from 'lucide-react'
 import { playReminderSound } from '../../lib/audio'
 import { formatTime12h } from '../../lib/notifications'
 
-const STORAGE_KEY_POS = 'meditrack_simulator_pos'
+const STORAGE_KEY_POS = 'meditrack_sim_widget_coords'
 
 export const TimeTravelWidget: React.FC = () => {
   const { triggerTestNotification, triggerSimulatedEscalation, setIsLockScreenOpen } = useNotifications()
@@ -33,12 +35,12 @@ export const TimeTravelWidget: React.FC = () => {
     settings
   } = useMediTrack()
 
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [showPresets, setShowPresets] = useState(false)
+  const [showAdjustBar, setShowAdjustBar] = useState(false)
 
-  // Load saved position or default to bottom-left
-  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+  // Default initial position
+  const [coords, setCoords] = useState<{ x: number; y: number }>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_POS)
       if (saved) {
@@ -48,130 +50,119 @@ export const TimeTravelWidget: React.FC = () => {
         }
       }
     } catch (_) {}
-    return { x: 16, y: 480 }
+    return { x: 16, y: 380 }
   })
 
-  // Adjust default Y on initial mount if too low
+  const widgetRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+  const dragStartInfo = useRef({ startClientX: 0, startClientY: 0, startElemLeft: 0, startElemTop: 0 })
+
+  // Position adjustment on mount to ensure it's safely inside the viewport
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const initialY = Math.max(80, window.innerHeight - 220)
-      setPos(prev => {
-        if (prev.y === 480) {
-          return { x: 16, y: initialY }
-        }
-        return prev
-      })
+    const handleInitialBound = () => {
+      const maxX = Math.max(10, window.innerWidth - 340)
+      const maxY = Math.max(10, window.innerHeight - 280)
+      setCoords(prev => ({
+        x: Math.max(10, Math.min(maxX, prev.x)),
+        y: Math.max(10, Math.min(maxY, prev.y))
+      }))
     }
+    handleInitialBound()
+    window.addEventListener('resize', handleInitialBound)
+    return () => window.removeEventListener('resize', handleInitialBound)
   }, [])
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const isDragging = useRef(false)
-  const dragStart = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 })
-
-  // Synchronize DOM position
-  const updateDomPosition = (x: number, y: number) => {
-    if (containerRef.current) {
-      containerRef.current.style.left = `${x}px`
-      containerRef.current.style.top = `${y}px`
-    }
-  }
-
-  // Mouse / Touch Drag Handlers
-  const handleDragStart = (clientX: number, clientY: number) => {
+  // ── Drag & Move Logic ──
+  const startDrag = (clientX: number, clientY: number) => {
+    if (!widgetRef.current) return
     isDragging.current = true
-    dragStart.current = {
-      mouseX: clientX,
-      mouseY: clientY,
-      posX: pos.x,
-      posY: pos.y
+
+    const rect = widgetRef.current.getBoundingClientRect()
+    dragStartInfo.current = {
+      startClientX: clientX,
+      startClientY: clientY,
+      startElemLeft: rect.left,
+      startElemTop: rect.top
     }
 
-    const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-      if (!isDragging.current) return
+    const onPointerMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging.current || !widgetRef.current) return
       
-      const clientXNow = 'touches' in e ? e.touches[0].clientX : e.clientX
-      const clientYNow = 'touches' in e ? e.touches[0].clientY : e.clientY
+      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX
+      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY
 
-      const deltaX = clientXNow - dragStart.current.mouseX
-      const deltaY = clientYNow - dragStart.current.mouseY
+      const deltaX = currentX - dragStartInfo.current.startClientX
+      const deltaY = currentY - dragStartInfo.current.startClientY
 
-      const width = isMinimized ? 130 : 320
-      const height = isMinimized ? 44 : (isExpanded ? 340 : 50)
+      const elemWidth = widgetRef.current.offsetWidth || 320
+      const elemHeight = widgetRef.current.offsetHeight || 200
 
-      const maxX = Math.max(10, window.innerWidth - width - 10)
-      const maxY = Math.max(10, window.innerHeight - height - 10)
+      const maxAllowedX = Math.max(10, window.innerWidth - elemWidth - 10)
+      const maxAllowedY = Math.max(10, window.innerHeight - elemHeight - 10)
 
-      const newX = Math.max(10, Math.min(maxX, dragStart.current.posX + deltaX))
-      const newY = Math.max(10, Math.min(maxY, dragStart.current.posY + deltaY))
+      const targetX = Math.max(10, Math.min(maxAllowedX, dragStartInfo.current.startElemLeft + deltaX))
+      const targetY = Math.max(10, Math.min(maxAllowedY, dragStartInfo.current.startElemTop + deltaY))
 
-      updateDomPosition(newX, newY)
+      widgetRef.current.style.left = `${targetX}px`
+      widgetRef.current.style.top = `${targetY}px`
     }
 
-    const handlePointerEnd = (e: MouseEvent | TouchEvent) => {
+    const onPointerUp = () => {
       if (!isDragging.current) return
       isDragging.current = false
 
-      document.removeEventListener('mousemove', handlePointerMove)
-      document.removeEventListener('mouseup', handlePointerEnd)
-      document.removeEventListener('touchmove', handlePointerMove)
-      document.removeEventListener('touchend', handlePointerEnd)
+      document.removeEventListener('mousemove', onPointerMove)
+      document.removeEventListener('mouseup', onPointerUp)
+      document.removeEventListener('touchmove', onPointerMove)
+      document.removeEventListener('touchend', onPointerUp)
 
-      if (containerRef.current) {
-        const finalLeft = parseInt(containerRef.current.style.left, 10) || pos.x
-        const finalTop = parseInt(containerRef.current.style.top, 10) || pos.y
-        const finalPos = { x: finalLeft, y: finalTop }
-        setPos(finalPos)
+      if (widgetRef.current) {
+        const rectAfter = widgetRef.current.getBoundingClientRect()
+        const finalCoords = { x: Math.round(rectAfter.left), y: Math.round(rectAfter.top) }
+        setCoords(finalCoords)
         try {
-          localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(finalPos))
+          localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(finalCoords))
         } catch (_) {}
       }
     }
 
-    document.addEventListener('mousemove', handlePointerMove, { passive: false })
-    document.addEventListener('mouseup', handlePointerEnd)
-    document.addEventListener('touchmove', handlePointerMove, { passive: false })
-    document.addEventListener('touchend', handlePointerEnd)
+    document.addEventListener('mousemove', onPointerMove, { passive: false })
+    document.addEventListener('mouseup', onPointerUp)
+    document.addEventListener('touchmove', onPointerMove, { passive: false })
+    document.addEventListener('touchend', onPointerUp)
   }
 
-  const onMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return
-    e.preventDefault()
-    handleDragStart(e.clientX, e.clientY)
-  }
+  // ── Corner Quick-Snap Adjustment ──
+  const snapToCorner = (corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') => {
+    if (!widgetRef.current) return
+    const width = widgetRef.current.offsetWidth || 320
+    const height = widgetRef.current.offsetHeight || 250
 
-  const onTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return
-    handleDragStart(e.touches[0].clientX, e.touches[0].clientY)
-  }
-
-  // Preset Position Snapping
-  const snapTo = (corner: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right') => {
-    const width = isMinimized ? 130 : 320
-    const height = isMinimized ? 44 : (isExpanded ? 340 : 50)
     let newX = 16
     let newY = 80
 
     if (corner === 'bottom-left') {
       newX = 16
-      newY = window.innerHeight - height - 20
+      newY = Math.max(80, window.innerHeight - height - 20)
     } else if (corner === 'bottom-right') {
-      newX = window.innerWidth - width - 16
-      newY = window.innerHeight - height - 20
+      newX = Math.max(16, window.innerWidth - width - 20)
+      newY = Math.max(80, window.innerHeight - height - 20)
     } else if (corner === 'top-left') {
       newX = 16
       newY = 80
     } else if (corner === 'top-right') {
-      newX = window.innerWidth - width - 16
+      newX = Math.max(16, window.innerWidth - width - 20)
       newY = 80
     }
 
-    const snapped = { x: newX, y: newY }
-    setPos(snapped)
-    updateDomPosition(newX, newY)
+    const target = { x: newX, y: newY }
+    setCoords(target)
+    widgetRef.current.style.left = `${newX}px`
+    widgetRef.current.style.top = `${newY}px`
     try {
-      localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(snapped))
+      localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(target))
     } catch (_) {}
-    setShowPresets(false)
+    setShowAdjustBar(false)
   }
 
   const handleFastForward = (minutes: number) => {
@@ -193,19 +184,26 @@ export const TimeTravelWidget: React.FC = () => {
   if (isMinimized) {
     return (
       <div
-        ref={containerRef}
+        ref={widgetRef}
         style={{
           position: 'fixed',
-          left: `${pos.x}px`,
-          top: `${pos.y}px`,
+          left: `${coords.x}px`,
+          top: `${coords.y}px`,
           zIndex: 9999
         }}
-        className="no-print select-none touch-none"
+        className="no-print select-none"
       >
         <div
-          onMouseDown={onMouseDown}
-          onTouchStart={onTouchStart}
-          className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900/95 text-white backdrop-blur-xl border border-teal-400 shadow-2xl cursor-grab active:cursor-grabbing hover:scale-105 transition-transform"
+          onMouseDown={e => {
+            if ((e.target as HTMLElement).closest('button')) return
+            e.preventDefault()
+            startDrag(e.clientX, e.clientY)
+          }}
+          onTouchStart={e => {
+            if ((e.target as HTMLElement).closest('button')) return
+            startDrag(e.touches[0].clientX, e.touches[0].clientY)
+          }}
+          className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900/95 text-white backdrop-blur-2xl border-2 border-teal-400 shadow-2xl cursor-move active:cursor-grabbing hover:scale-105 transition-transform"
         >
           <GripVertical className="w-4 h-4 text-teal-400" />
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
@@ -214,7 +212,7 @@ export const TimeTravelWidget: React.FC = () => {
           </span>
           <button
             onClick={() => setIsMinimized(false)}
-            className="p-1 rounded-full bg-white/10 hover:bg-white/25 text-white cursor-pointer ml-1"
+            className="p-1 rounded-full bg-teal-500/20 hover:bg-teal-500/40 text-teal-300 cursor-pointer ml-1"
             title="Expand Controls"
           >
             <Maximize2 className="w-3.5 h-3.5" />
@@ -224,45 +222,59 @@ export const TimeTravelWidget: React.FC = () => {
     )
   }
 
-  // ── Render Full Movable & Adjustable Simulator Widget ──
+  // ── Render Full Movable & Adjustable Widget ──
   return (
     <div
-      ref={containerRef}
+      ref={widgetRef}
       style={{
         position: 'fixed',
-        left: `${pos.x}px`,
-        top: `${pos.y}px`,
+        left: `${coords.x}px`,
+        top: `${coords.y}px`,
         zIndex: 9999
       }}
-      className="no-print select-none max-w-sm w-[320px]"
+      className="no-print select-none max-w-sm w-[320px] transition-shadow"
     >
-      <div className="rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white backdrop-blur-2xl border-2 border-teal-500/60 shadow-2xl shadow-slate-950/60 overflow-hidden text-xs transition-all">
-        {/* ═══ Drag Header Bar — Drag anywhere here ═══ */}
+      <div className="rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white backdrop-blur-2xl border-2 border-teal-500/70 shadow-2xl shadow-slate-950/80 overflow-hidden text-xs">
+        
+        {/* ═══ Header Bar (Drag Handle) ═══ */}
         <div
-          onMouseDown={onMouseDown}
-          onTouchStart={onTouchStart}
-          className="w-full px-3 py-2.5 flex items-center justify-between gap-2 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-white/10 cursor-grab active:cursor-grabbing touch-none"
-          title="Drag and move anywhere on screen"
+          onMouseDown={e => {
+            if ((e.target as HTMLElement).closest('button')) return
+            e.preventDefault()
+            startDrag(e.clientX, e.clientY)
+          }}
+          onTouchStart={e => {
+            if ((e.target as HTMLElement).closest('button')) return
+            startDrag(e.touches[0].clientX, e.touches[0].clientY)
+          }}
+          className="w-full px-3 py-2.5 flex items-center justify-between gap-2 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-white/10 cursor-move active:cursor-grabbing"
+          title="Click and drag to move anywhere on screen"
         >
+          {/* Drag Handle Label */}
           <div className="flex items-center gap-1.5 pointer-events-none min-w-0">
-            <GripVertical className="w-4 h-4 text-teal-400 shrink-0" />
+            <GripVertical className="w-4 h-4 text-teal-400 shrink-0 animate-pulse" />
             <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping shrink-0" />
             <span className="font-extrabold text-teal-400 tracking-wide uppercase text-[11px] truncate">
               Live Simulator
             </span>
             {simulatedTime.isSimulated && (
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[10px] shrink-0">
+              <span className="px-1.5 py-0.5 rounded bg-amber-500/25 text-amber-300 font-mono text-[10px] shrink-0 font-bold">
                 {formatTime12h(simulatedTime.simulatedTimeStr)}
               </span>
             )}
           </div>
 
+          {/* Action Icons */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* Corner Snap Preset Toggle */}
+            {/* Position Adjustment / Corner Quick-Snap */}
             <button
-              onClick={() => setShowPresets(!showPresets)}
-              className="p-1 rounded-lg hover:bg-white/10 text-teal-300 cursor-pointer"
-              title="Snap to corner (Adjust position)"
+              onClick={() => setShowAdjustBar(!showAdjustBar)}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                showAdjustBar
+                  ? 'bg-teal-500/30 border-teal-400 text-white'
+                  : 'bg-white/5 border-white/10 hover:bg-white/15 text-teal-300'
+              }`}
+              title="Adjust position: Snap to corners"
             >
               <Move className="w-3.5 h-3.5" />
             </button>
@@ -271,15 +283,16 @@ export const TimeTravelWidget: React.FC = () => {
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="px-2 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
+              title="Expand or collapse tool buttons"
             >
               <span>{isExpanded ? 'Hide' : 'Tools'}</span>
               {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Minimize */}
+            {/* Minimize to Pill */}
             <button
               onClick={() => setIsMinimized(true)}
-              className="p-1 rounded-lg hover:bg-white/10 text-slate-400 cursor-pointer"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-400 cursor-pointer"
               title="Minimize to floating bubble"
             >
               <Minimize2 className="w-3.5 h-3.5" />
@@ -287,59 +300,60 @@ export const TimeTravelWidget: React.FC = () => {
           </div>
         </div>
 
-        {/* ═══ Corner Preset Selector (When Adjust icon is clicked) ═══ */}
-        {showPresets && (
+        {/* ═══ Corner Snap Adjustment Bar ═══ */}
+        {showAdjustBar && (
           <div className="p-2.5 bg-slate-800/95 border-b border-white/10 space-y-1.5 animate-in fade-in">
-            <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider block text-center">
-              Quick Snap Position:
-            </span>
+            <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span>Quick Snap Position:</span>
+              <span className="text-teal-400">or Drag header ✥</span>
+            </div>
             <div className="grid grid-cols-2 gap-1.5">
               <button
-                onClick={() => snapTo('top-left')}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-teal-500/30 text-[11px] flex items-center justify-center gap-1 cursor-pointer font-medium"
+                onClick={() => snapToCorner('top-left')}
+                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
               >
-                <CornerUpLeft className="w-3 h-3" />
+                <CornerUpLeft className="w-3.5 h-3.5 text-teal-400" />
                 <span>Top Left</span>
               </button>
               <button
-                onClick={() => snapTo('top-right')}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-teal-500/30 text-[11px] flex items-center justify-center gap-1 cursor-pointer font-medium"
+                onClick={() => snapToCorner('top-right')}
+                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
               >
-                <CornerUpRight className="w-3 h-3" />
+                <CornerUpRight className="w-3.5 h-3.5 text-teal-400" />
                 <span>Top Right</span>
               </button>
               <button
-                onClick={() => snapTo('bottom-left')}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-teal-500/30 text-[11px] flex items-center justify-center gap-1 cursor-pointer font-medium"
+                onClick={() => snapToCorner('bottom-left')}
+                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
               >
-                <CornerDownLeft className="w-3 h-3" />
+                <CornerDownLeft className="w-3.5 h-3.5 text-teal-400" />
                 <span>Bottom Left</span>
               </button>
               <button
-                onClick={() => snapTo('bottom-right')}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-teal-500/30 text-[11px] flex items-center justify-center gap-1 cursor-pointer font-medium"
+                onClick={() => snapToCorner('bottom-right')}
+                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
               >
-                <CornerDownRight className="w-3 h-3" />
+                <CornerDownRight className="w-3.5 h-3.5 text-teal-400" />
                 <span>Bottom Right</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* ═══ Expanded Simulation Controls ═══ */}
+        {/* ═══ Simulation Controls ═══ */}
         {isExpanded && (
           <div className="p-3 space-y-2 animate-in slide-in-from-top-2">
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => triggerTestNotification()}
-                className="p-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-xs"
               >
                 <Bell className="w-3.5 h-3.5" />
                 <span>Trigger Alarm</span>
               </button>
               <button
                 onClick={() => setIsLockScreenOpen(true)}
-                className="p-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-xs"
               >
                 <Smartphone className="w-3.5 h-3.5" />
                 <span>Lockscreen</span>
@@ -349,14 +363,14 @@ export const TimeTravelWidget: React.FC = () => {
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={() => handleFastForward(30)}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-medium flex items-center justify-center gap-1.5 cursor-pointer"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
               >
                 <FastForward className="w-3.5 h-3.5 text-amber-300" />
                 <span>Clock +30m</span>
               </button>
               <button
                 onClick={resetSimulatedTime}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-medium flex items-center justify-center gap-1.5 cursor-pointer"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-teal-300" />
                 <span>Real Clock</span>
@@ -366,30 +380,31 @@ export const TimeTravelWidget: React.FC = () => {
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 onClick={triggerSimulatedEscalation}
-                className="p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
               >
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>Escalation</span>
               </button>
               <button
                 onClick={() => playReminderSound(settings.soundTheme)}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-medium flex items-center justify-center gap-1.5 cursor-pointer"
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
               >
                 <Volume2 className="w-3.5 h-3.5 text-emerald-300" />
                 <span>Chime Alert</span>
               </button>
             </div>
 
-            <div className="pt-1.5 flex items-center justify-between text-[10px] text-slate-400 border-t border-white/10">
-              <span className="flex items-center gap-1 text-teal-300">
+            {/* Footer drag instruction */}
+            <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-white/10">
+              <span className="flex items-center gap-1 text-teal-300 font-medium">
                 <Move className="w-3 h-3" />
-                <span>Hold & drag header to move</span>
+                <span>Click & drag top bar anywhere</span>
               </span>
               <button
-                onClick={() => snapTo('bottom-left')}
-                className="text-teal-400 hover:underline cursor-pointer font-semibold"
+                onClick={() => snapToCorner('bottom-left')}
+                className="text-teal-400 hover:underline cursor-pointer font-bold"
               >
-                Reset
+                Reset Position
               </button>
             </div>
           </div>
