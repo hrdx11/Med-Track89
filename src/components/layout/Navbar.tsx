@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useMediTrack } from '../../context/MediTrackContext'
 import { ViewTab } from '../../types'
 import {
-  Pill,
   Sun,
   Moon,
   Type,
@@ -12,10 +11,8 @@ import {
   Layers,
   Settings,
   HeartPulse,
-  Clock,
   PhoneCall,
   ShoppingBag,
-  User,
   Download
 } from 'lucide-react'
 import { formatTime12h } from '../../lib/notifications'
@@ -28,8 +25,6 @@ export const Navbar: React.FC = () => {
     toggleTheme,
     accessibilityMode,
     toggleAccessibilityMode,
-    caregiverMode,
-    setCaregiverMode,
     simulatedTime,
     setIsSosModalOpen,
     setIsAuthModalOpen,
@@ -66,19 +61,38 @@ export const Navbar: React.FC = () => {
   ]
 
   return (
-    <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/75 dark:bg-slate-900/80 border-b border-white/40 dark:border-slate-800/60 shadow-sm transition-colors no-print">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/80 dark:bg-slate-900/85 border-b border-slate-200/70 dark:border-slate-800/70 shadow-sm transition-colors no-print">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-3">
-          {/* Logo & Brand — Full MED_11 brand logo */}
+          
+          {/* ══════ Logo & Brand (Full Custom 3D Emblem + Typography) ══════ */}
           <div
             onClick={() => setActiveTab('today')}
-            className="flex items-center cursor-pointer select-none group shrink-0"
+            className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer select-none group shrink-0"
           >
-            <img
-              src="/MED_11.png"
-              alt="MediTrack — Track • Manage • Live Better"
-              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-transform"
-            />
+            {/* Custom 3D Teal M Emblem */}
+            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-slate-800 border border-teal-500/30 p-1.5 shadow-md shadow-teal-500/15 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
+              <img
+                src="/logo-emblem.png"
+                alt="MediTrack Logo Emblem"
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Brand Title & Tagline */}
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight font-heading text-slate-900 dark:text-white">
+                  Medi<span className="text-teal-600 dark:text-teal-400">Track</span>
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 border border-teal-500/30">
+                  Care
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-semibold tracking-wide hidden sm:block">
+                TRACK • MANAGE • LIVE BETTER
+              </p>
+            </div>
           </div>
 
           {/* Desktop Navigation Links */}
