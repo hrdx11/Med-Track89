@@ -69,29 +69,16 @@ export const Navbar: React.FC = () => {
     <header className="sticky top-0 z-30 w-full backdrop-blur-xl bg-white/75 dark:bg-slate-900/80 border-b border-white/40 dark:border-slate-800/60 shadow-sm transition-colors no-print">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-3">
-          {/* Logo & Brand */}
+          {/* Logo & Brand — Full MED_11 brand logo */}
           <div
             onClick={() => setActiveTab('today')}
-            className="flex items-center gap-2.5 sm:gap-3 cursor-pointer select-none group shrink-0"
+            className="flex items-center cursor-pointer select-none group shrink-0"
           >
             <img
-              src="/logo-512.png"
-              alt="MediTrack"
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl shadow-lg shadow-teal-500/25 group-hover:scale-105 transition-transform object-contain"
+              src="/logo-full.png"
+              alt="MediTrack — Track • Manage • Live Better"
+              className="h-12 sm:h-14 w-auto object-contain group-hover:scale-105 transition-transform"
             />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xl sm:text-2xl font-extrabold tracking-tight font-heading text-slate-900 dark:text-white">
-                  MediTrack
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 border border-teal-500/30">
-                  Care
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
-                Reminder & Dosage Tracker
-              </p>
-            </div>
           </div>
 
           {/* Desktop Navigation Links */}

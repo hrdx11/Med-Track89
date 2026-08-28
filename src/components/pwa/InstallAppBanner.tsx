@@ -25,26 +25,19 @@ export const InstallAppBanner: React.FC = () => {
       showCloseButton={true}
     >
       <div className="text-center space-y-5">
-        {/* ══════ BRAND LOGO — Large & Prominent ══════ */}
+        {/* ══════ BRAND LOGO — Full rectangular logo with M + MediTrack text ══════ */}
         <div className="flex flex-col items-center gap-3">
-          <div className="p-2 rounded-3xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/40 dark:to-emerald-950/40 border border-teal-200/50 dark:border-teal-700/30 shadow-lg shadow-teal-500/15">
+          <div className="w-full rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 shadow-lg shadow-teal-500/10 p-4 sm:p-6">
             <img
-              src="/logo-512.png"
-              alt="MediTrack Brand Logo"
-              className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl object-contain animate-float-subtle"
-              onError={(e) => {
-                // Fallback if image fails to load
-                const target = e.target as HTMLImageElement
-                target.style.display = 'none'
-              }}
+              src="/logo-full.png"
+              alt="MediTrack — Track • Manage • Live Better"
+              className="w-full max-w-xs sm:max-w-sm mx-auto object-contain"
             />
           </div>
 
-          <div>
-            <span className="px-3 py-1 rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 font-bold text-xs border border-teal-500/30 uppercase tracking-wider">
-              Mobile & Desktop App Available
-            </span>
-          </div>
+          <span className="px-3 py-1 rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 font-bold text-xs border border-teal-500/30 uppercase tracking-wider">
+            Mobile & Desktop App Available
+          </span>
         </div>
 
         <div>
@@ -56,7 +49,7 @@ export const InstallAppBanner: React.FC = () => {
           </p>
         </div>
 
-        {/* Benefits Grid */}
+        {/* Benefits */}
         <div className="p-4 rounded-2xl bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 text-xs">
           <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-200 font-semibold">
             <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
@@ -64,7 +57,7 @@ export const InstallAppBanner: React.FC = () => {
           </div>
           <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-200 font-semibold">
             <Bell className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Direct Mark Taken / Snooze buttons on notification banner</span>
+            <span>Direct Mark Taken / Snooze buttons on notification</span>
           </div>
           <div className="flex items-center gap-2.5 text-slate-800 dark:text-slate-200 font-semibold">
             <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
@@ -72,7 +65,7 @@ export const InstallAppBanner: React.FC = () => {
           </div>
         </div>
 
-        {/* Action Button: Native PWA Install vs iOS Instructions */}
+        {/* Install Action */}
         {isIOS ? (
           <div className="p-4 rounded-2xl bg-teal-500/10 border border-teal-500/25 text-left text-xs space-y-2">
             <span className="font-bold text-teal-900 dark:text-teal-200 block">
@@ -102,7 +95,6 @@ export const InstallAppBanner: React.FC = () => {
           </div>
         )}
 
-        {/* Continue in Browser button */}
         <div>
           <button
             onClick={() => setIsInstallPromptOpen(false)}
