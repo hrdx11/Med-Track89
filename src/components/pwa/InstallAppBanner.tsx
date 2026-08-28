@@ -28,9 +28,13 @@ export const InstallAppBanner: React.FC = () => {
       showCloseButton={true}
     >
       <div className="text-center space-y-4">
-        {/* App Icon Banner */}
-        <div className="relative inline-flex items-center justify-center p-4 rounded-3xl bg-gradient-to-tr from-teal-600 to-teal-400 text-white shadow-xl shadow-teal-500/30 animate-float-subtle">
-          <Smartphone className="w-12 h-12" />
+        {/* App Icon Banner — Actual Brand Logo */}
+        <div className="relative inline-flex items-center justify-center">
+          <img
+            src="/logo-512.png"
+            alt="MediTrack Logo"
+            className="w-24 h-24 rounded-3xl shadow-xl shadow-teal-500/30 animate-float-subtle object-contain"
+          />
         </div>
 
         <div>
