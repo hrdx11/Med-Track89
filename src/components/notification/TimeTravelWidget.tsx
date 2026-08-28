@@ -1,219 +1,172 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+/**
+ * TimeTravelWidget — Fully draggable & adjustable Live Simulator Control
+ *
+ * How to move: Click & drag the dark header bar (⠿ grip area).
+ * How to snap: Click the ⤢ icon → pick a corner.
+ * Minimize: Click ⊟ to shrink to a floating pill.
+ */
+import React, { useEffect, useRef, useState } from 'react'
 import { useNotifications } from '../../context/NotificationContext'
 import { useMediTrack } from '../../context/MediTrackContext'
 import {
-  Bell,
-  FastForward,
-  RotateCcw,
-  Smartphone,
-  ShieldAlert,
-  Volume2,
-  ChevronUp,
-  ChevronDown,
-  GripVertical,
-  Move,
-  Minimize2,
-  Maximize2,
-  CornerDownLeft,
-  CornerDownRight,
-  CornerUpRight,
-  CornerUpLeft,
-  Settings2,
-  Sliders
+  Bell, FastForward, RotateCcw, Smartphone, ShieldAlert,
+  Volume2, ChevronUp, ChevronDown, GripVertical, Move,
+  Minimize2, Maximize2, CornerDownLeft, CornerDownRight,
+  CornerUpLeft, CornerUpRight
 } from 'lucide-react'
 import { playReminderSound } from '../../lib/audio'
 import { formatTime12h } from '../../lib/notifications'
 
-const STORAGE_KEY_POS = 'meditrack_sim_widget_coords'
+const STORAGE_KEY = 'mt_sim_pos'
+
+const loadSavedPos = (): { x: number; y: number } | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) {
+      const p = JSON.parse(raw)
+      if (typeof p.x === 'number' && typeof p.y === 'number') return p
+    }
+  } catch {}
+  return null
+}
+
+const savePos = (x: number, y: number) => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ x, y })) } catch {}
+}
 
 export const TimeTravelWidget: React.FC = () => {
   const { triggerTestNotification, triggerSimulatedEscalation, setIsLockScreenOpen } = useNotifications()
-  const {
-    simulatedTime,
-    setSimulatedTime,
-    resetSimulatedTime,
-    settings
-  } = useMediTrack()
+  const { simulatedTime, setSimulatedTime, resetSimulatedTime, settings } = useMediTrack()
 
   const [isExpanded, setIsExpanded] = useState(true)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [showAdjustBar, setShowAdjustBar] = useState(false)
+  const [showSnap, setShowSnap] = useState(false)
 
-  // Default initial position
-  const [coords, setCoords] = useState<{ x: number; y: number }>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_POS)
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-          return parsed
-        }
-      }
-    } catch (_) {}
-    return { x: 16, y: 380 }
-  })
+  // All position tracking via refs — no state updates during drag for zero jank
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+  const origin = useRef({ mouseX: 0, mouseY: 0, elemX: 0, elemY: 0 })
 
-  const widgetRef = useRef<HTMLDivElement>(null)
-  const isDragging = useRef(false)
-  const dragStartInfo = useRef({ startClientX: 0, startClientY: 0, startElemLeft: 0, startElemTop: 0 })
-
-  // Position adjustment on mount to ensure it's safely inside the viewport
+  // Initialise position once
   useEffect(() => {
-    const handleInitialBound = () => {
-      const maxX = Math.max(10, window.innerWidth - 340)
-      const maxY = Math.max(10, window.innerHeight - 280)
-      setCoords(prev => ({
-        x: Math.max(10, Math.min(maxX, prev.x)),
-        y: Math.max(10, Math.min(maxY, prev.y))
-      }))
-    }
-    handleInitialBound()
-    window.addEventListener('resize', handleInitialBound)
-    return () => window.removeEventListener('resize', handleInitialBound)
+    const el = wrapRef.current
+    if (!el) return
+    const saved = loadSavedPos()
+    const defX = 16
+    const defY = Math.max(90, window.innerHeight - 360)
+    const x = saved ? Math.min(saved.x, window.innerWidth - 340) : defX
+    const y = saved ? Math.min(saved.y, window.innerHeight - 100) : defY
+    el.style.left = `${x}px`
+    el.style.top = `${y}px`
   }, [])
 
-  // ── Drag & Move Logic ──
-  const startDrag = (clientX: number, clientY: number) => {
-    if (!widgetRef.current) return
-    isDragging.current = true
+  // ── Core drag logic (attached to document, not the element) ──
+  const beginDrag = (startX: number, startY: number) => {
+    const el = wrapRef.current
+    if (!el) return
+    dragging.current = true
+    const rect = el.getBoundingClientRect()
+    origin.current = { mouseX: startX, mouseY: startY, elemX: rect.left, elemY: rect.top }
 
-    const rect = widgetRef.current.getBoundingClientRect()
-    dragStartInfo.current = {
-      startClientX: clientX,
-      startClientY: clientY,
-      startElemLeft: rect.left,
-      startElemTop: rect.top
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+
+    const onMove = (cx: number, cy: number) => {
+      if (!dragging.current || !wrapRef.current) return
+      const dx = cx - origin.current.mouseX
+      const dy = cy - origin.current.mouseY
+      const w = wrapRef.current.offsetWidth
+      const h = wrapRef.current.offsetHeight
+      const newX = clamp(origin.current.elemX + dx, 8, window.innerWidth - w - 8)
+      const newY = clamp(origin.current.elemY + dy, 8, window.innerHeight - h - 8)
+      wrapRef.current.style.left = `${newX}px`
+      wrapRef.current.style.top = `${newY}px`
     }
 
-    const onPointerMove = (e: MouseEvent | TouchEvent) => {
-      if (!isDragging.current || !widgetRef.current) return
-      
-      const currentX = 'touches' in e ? e.touches[0].clientX : e.clientX
-      const currentY = 'touches' in e ? e.touches[0].clientY : e.clientY
+    const onMouseMove = (e: MouseEvent) => { e.preventDefault(); onMove(e.clientX, e.clientY) }
+    const onTouchMove = (e: TouchEvent) => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY) }
 
-      const deltaX = currentX - dragStartInfo.current.startClientX
-      const deltaY = currentY - dragStartInfo.current.startClientY
-
-      const elemWidth = widgetRef.current.offsetWidth || 320
-      const elemHeight = widgetRef.current.offsetHeight || 200
-
-      const maxAllowedX = Math.max(10, window.innerWidth - elemWidth - 10)
-      const maxAllowedY = Math.max(10, window.innerHeight - elemHeight - 10)
-
-      const targetX = Math.max(10, Math.min(maxAllowedX, dragStartInfo.current.startElemLeft + deltaX))
-      const targetY = Math.max(10, Math.min(maxAllowedY, dragStartInfo.current.startElemTop + deltaY))
-
-      widgetRef.current.style.left = `${targetX}px`
-      widgetRef.current.style.top = `${targetY}px`
-    }
-
-    const onPointerUp = () => {
-      if (!isDragging.current) return
-      isDragging.current = false
-
-      document.removeEventListener('mousemove', onPointerMove)
-      document.removeEventListener('mouseup', onPointerUp)
-      document.removeEventListener('touchmove', onPointerMove)
-      document.removeEventListener('touchend', onPointerUp)
-
-      if (widgetRef.current) {
-        const rectAfter = widgetRef.current.getBoundingClientRect()
-        const finalCoords = { x: Math.round(rectAfter.left), y: Math.round(rectAfter.top) }
-        setCoords(finalCoords)
-        try {
-          localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(finalCoords))
-        } catch (_) {}
+    const onEnd = () => {
+      dragging.current = false
+      if (wrapRef.current) {
+        const r = wrapRef.current.getBoundingClientRect()
+        savePos(Math.round(r.left), Math.round(r.top))
       }
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onEnd)
+      document.removeEventListener('touchmove', onTouchMove)
+      document.removeEventListener('touchend', onEnd)
     }
 
-    document.addEventListener('mousemove', onPointerMove, { passive: false })
-    document.addEventListener('mouseup', onPointerUp)
-    document.addEventListener('touchmove', onPointerMove, { passive: false })
-    document.addEventListener('touchend', onPointerUp)
+    document.addEventListener('mousemove', onMouseMove, { passive: false })
+    document.addEventListener('mouseup', onEnd)
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
+    document.addEventListener('touchend', onEnd)
   }
 
-  // ── Corner Quick-Snap Adjustment ──
-  const snapToCorner = (corner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') => {
-    if (!widgetRef.current) return
-    const width = widgetRef.current.offsetWidth || 320
-    const height = widgetRef.current.offsetHeight || 250
+  const onHeaderMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return
+    e.preventDefault()
+    beginDrag(e.clientX, e.clientY)
+  }
 
-    let newX = 16
-    let newY = 80
+  const onHeaderTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button')) return
+    beginDrag(e.touches[0].clientX, e.touches[0].clientY)
+  }
 
-    if (corner === 'bottom-left') {
-      newX = 16
-      newY = Math.max(80, window.innerHeight - height - 20)
-    } else if (corner === 'bottom-right') {
-      newX = Math.max(16, window.innerWidth - width - 20)
-      newY = Math.max(80, window.innerHeight - height - 20)
-    } else if (corner === 'top-left') {
-      newX = 16
-      newY = 80
-    } else if (corner === 'top-right') {
-      newX = Math.max(16, window.innerWidth - width - 20)
-      newY = 80
+  // ── Corner snap ──
+  const snapTo = (corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    const el = wrapRef.current
+    if (!el) return
+    const w = el.offsetWidth, h = el.offsetHeight
+    const pad = 12
+    const positions = {
+      tl: { x: pad,                          y: 90 },
+      tr: { x: window.innerWidth - w - pad,  y: 90 },
+      bl: { x: pad,                          y: window.innerHeight - h - pad },
+      br: { x: window.innerWidth - w - pad,  y: window.innerHeight - h - pad },
     }
-
-    const target = { x: newX, y: newY }
-    setCoords(target)
-    widgetRef.current.style.left = `${newX}px`
-    widgetRef.current.style.top = `${newY}px`
-    try {
-      localStorage.setItem(STORAGE_KEY_POS, JSON.stringify(target))
-    } catch (_) {}
-    setShowAdjustBar(false)
+    const { x, y } = positions[corner]
+    el.style.left = `${x}px`
+    el.style.top = `${y}px`
+    savePos(x, y)
+    setShowSnap(false)
   }
 
   const handleFastForward = (minutes: number) => {
-    const currentStr = simulatedTime.isSimulated
+    const cur = simulatedTime.isSimulated
       ? simulatedTime.simulatedTimeStr
-      : `${String(new Date().getHours()).padStart(2, '0')}:${String(new Date().getMinutes()).padStart(2, '0')}`
-    const [h, m] = currentStr.split(':').map(Number)
-    const totalMinutes = (h * 60 + m + minutes) % (24 * 60)
-    const newH = String(Math.floor(totalMinutes / 60)).padStart(2, '0')
-    const newM = String(totalMinutes % 60).padStart(2, '0')
+      : `${String(new Date().getHours()).padStart(2,'0')}:${String(new Date().getMinutes()).padStart(2,'0')}`
+    const [h, m] = cur.split(':').map(Number)
+    const total = (h * 60 + m + minutes) % 1440
     setSimulatedTime({
       isSimulated: true,
-      simulatedTimeStr: `${newH}:${newM}`,
+      simulatedTimeStr: `${String(Math.floor(total / 60)).padStart(2,'0')}:${String(total % 60).padStart(2,'0')}`,
       simulatedDateStr: simulatedTime.simulatedDateStr
     })
   }
 
-  // ── Render Minimized Mode ──
+  // ── Minimised pill ──
   if (isMinimized) {
     return (
-      <div
-        ref={widgetRef}
-        style={{
-          position: 'fixed',
-          left: `${coords.x}px`,
-          top: `${coords.y}px`,
-          zIndex: 9999
-        }}
-        className="no-print select-none"
-      >
+      <div ref={wrapRef} style={{ position: 'fixed', zIndex: 9999 }} className="no-print">
         <div
-          onMouseDown={e => {
-            if ((e.target as HTMLElement).closest('button')) return
-            e.preventDefault()
-            startDrag(e.clientX, e.clientY)
-          }}
-          onTouchStart={e => {
-            if ((e.target as HTMLElement).closest('button')) return
-            startDrag(e.touches[0].clientX, e.touches[0].clientY)
-          }}
-          className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-900/95 text-white backdrop-blur-2xl border-2 border-teal-400 shadow-2xl cursor-move active:cursor-grabbing hover:scale-105 transition-transform"
+          onMouseDown={onHeaderMouseDown}
+          onTouchStart={onHeaderTouchStart}
+          className="flex items-center gap-2 pl-3 pr-2 py-2 rounded-full bg-slate-900/95 text-white border-2 border-teal-400 shadow-2xl cursor-move select-none"
         >
-          <GripVertical className="w-4 h-4 text-teal-400" />
-          <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
-          <span className="text-[11px] font-extrabold text-teal-400 uppercase tracking-wider">
-            Simulator
-          </span>
+          <GripVertical className="w-4 h-4 text-teal-400 shrink-0" />
+          <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping shrink-0" />
+          <span className="text-[11px] font-extrabold text-teal-400 uppercase tracking-wider">Sim</span>
+          {simulatedTime.isSimulated && (
+            <span className="text-[10px] font-mono text-amber-300 font-bold">
+              {formatTime12h(simulatedTime.simulatedTimeStr)}
+            </span>
+          )}
           <button
             onClick={() => setIsMinimized(false)}
-            className="p-1 rounded-full bg-teal-500/20 hover:bg-teal-500/40 text-teal-300 cursor-pointer ml-1"
-            title="Expand Controls"
+            className="p-1 rounded-full bg-white/10 hover:bg-white/25 cursor-pointer ml-1"
+            title="Expand"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
@@ -222,38 +175,25 @@ export const TimeTravelWidget: React.FC = () => {
     )
   }
 
-  // ── Render Full Movable & Adjustable Widget ──
+  // ── Full widget ──
   return (
     <div
-      ref={widgetRef}
-      style={{
-        position: 'fixed',
-        left: `${coords.x}px`,
-        top: `${coords.y}px`,
-        zIndex: 9999
-      }}
-      className="no-print select-none max-w-sm w-[320px] transition-shadow"
+      ref={wrapRef}
+      style={{ position: 'fixed', zIndex: 9999, width: 308 }}
+      className="no-print"
     >
-      <div className="rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white backdrop-blur-2xl border-2 border-teal-500/70 shadow-2xl shadow-slate-950/80 overflow-hidden text-xs">
-        
-        {/* ═══ Header Bar (Drag Handle) ═══ */}
+      <div className="rounded-2xl bg-slate-900/95 text-white border-2 border-teal-500/70 shadow-2xl overflow-visible text-xs">
+
+        {/* ── Drag Header ─────────────────────────────────────────── */}
         <div
-          onMouseDown={e => {
-            if ((e.target as HTMLElement).closest('button')) return
-            e.preventDefault()
-            startDrag(e.clientX, e.clientY)
-          }}
-          onTouchStart={e => {
-            if ((e.target as HTMLElement).closest('button')) return
-            startDrag(e.touches[0].clientX, e.touches[0].clientY)
-          }}
-          className="w-full px-3 py-2.5 flex items-center justify-between gap-2 bg-gradient-to-r from-slate-800 to-slate-900 border-b border-white/10 cursor-move active:cursor-grabbing"
-          title="Click and drag to move anywhere on screen"
+          onMouseDown={onHeaderMouseDown}
+          onTouchStart={onHeaderTouchStart}
+          className="flex items-center justify-between gap-2 px-3 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 rounded-t-2xl cursor-move select-none border-b border-white/10"
+          title="Drag to move • Click ⤢ to snap to corner"
         >
-          {/* Drag Handle Label */}
           <div className="flex items-center gap-1.5 pointer-events-none min-w-0">
-            <GripVertical className="w-4 h-4 text-teal-400 shrink-0 animate-pulse" />
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping shrink-0" />
+            <GripVertical className="w-4 h-4 text-teal-400 shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-ping shrink-0" />
             <span className="font-extrabold text-teal-400 tracking-wide uppercase text-[11px] truncate">
               Live Simulator
             </span>
@@ -264,147 +204,101 @@ export const TimeTravelWidget: React.FC = () => {
             )}
           </div>
 
-          {/* Action Icons */}
           <div className="flex items-center gap-1 shrink-0">
-            {/* Position Adjustment / Corner Quick-Snap */}
+            {/* Snap */}
             <button
-              onClick={() => setShowAdjustBar(!showAdjustBar)}
-              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                showAdjustBar
-                  ? 'bg-teal-500/30 border-teal-400 text-white'
-                  : 'bg-white/5 border-white/10 hover:bg-white/15 text-teal-300'
-              }`}
-              title="Adjust position: Snap to corners"
+              onClick={() => setShowSnap(s => !s)}
+              className={`p-1.5 rounded-lg text-[11px] cursor-pointer border transition-colors ${showSnap ? 'bg-teal-500/30 border-teal-400 text-white' : 'bg-white/5 border-white/10 hover:bg-white/15 text-teal-300'}`}
+              title="Snap to corner"
             >
               <Move className="w-3.5 h-3.5" />
             </button>
 
-            {/* Expand / Collapse */}
+            {/* Expand */}
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="px-2 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 flex items-center gap-1 text-[11px] font-bold cursor-pointer"
-              title="Expand or collapse tool buttons"
+              onClick={() => setIsExpanded(e => !e)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/35 text-teal-300 text-[11px] font-bold cursor-pointer"
             >
-              <span>{isExpanded ? 'Hide' : 'Tools'}</span>
-              {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+              {isExpanded ? 'Hide' : 'Tools'}
+              {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
             </button>
 
-            {/* Minimize to Pill */}
+            {/* Minimize */}
             <button
               onClick={() => setIsMinimized(true)}
               className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-slate-400 cursor-pointer"
-              title="Minimize to floating bubble"
+              title="Minimize"
             >
               <Minimize2 className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* ═══ Corner Snap Adjustment Bar ═══ */}
-        {showAdjustBar && (
-          <div className="p-2.5 bg-slate-800/95 border-b border-white/10 space-y-1.5 animate-in fade-in">
-            <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-              <span>Quick Snap Position:</span>
-              <span className="text-teal-400">or Drag header ✥</span>
+        {/* ── Corner Snap Panel ───────────────────────────────────── */}
+        {showSnap && (
+          <div className="px-3 pt-2.5 pb-2 bg-slate-800/95 border-b border-white/10 space-y-2">
+            <div className="flex items-center justify-between text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider">Snap position</span>
+              <span className="text-teal-400">or drag header ↑</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => snapToCorner('top-left')}
-                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
-              >
-                <CornerUpLeft className="w-3.5 h-3.5 text-teal-400" />
-                <span>Top Left</span>
-              </button>
-              <button
-                onClick={() => snapToCorner('top-right')}
-                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
-              >
-                <CornerUpRight className="w-3.5 h-3.5 text-teal-400" />
-                <span>Top Right</span>
-              </button>
-              <button
-                onClick={() => snapToCorner('bottom-left')}
-                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
-              >
-                <CornerDownLeft className="w-3.5 h-3.5 text-teal-400" />
-                <span>Bottom Left</span>
-              </button>
-              <button
-                onClick={() => snapToCorner('bottom-right')}
-                className="p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold flex items-center justify-center gap-1.5 cursor-pointer text-slate-200"
-              >
-                <CornerDownRight className="w-3.5 h-3.5 text-teal-400" />
-                <span>Bottom Right</span>
-              </button>
+              {([['tl','↖','Top Left'],['tr','↗','Top Right'],['bl','↙','Bot Left'],['br','↘','Bot Right']] as const).map(([c, arrow, label]) => (
+                <button
+                  key={c}
+                  onClick={() => snapTo(c)}
+                  className="flex items-center justify-center gap-1.5 p-2 rounded-xl bg-white/10 hover:bg-teal-500/30 text-[11px] font-bold cursor-pointer text-slate-200 transition-colors"
+                >
+                  <span className="text-teal-400">{arrow}</span>
+                  <span>{label}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
-        {/* ═══ Simulation Controls ═══ */}
+        {/* ── Simulation Controls ─────────────────────────────────── */}
         {isExpanded && (
-          <div className="p-3 space-y-2 animate-in slide-in-from-top-2">
+          <div className="p-3 space-y-2">
             <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => triggerTestNotification()}
-                className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-xs"
-              >
-                <Bell className="w-3.5 h-3.5" />
-                <span>Trigger Alarm</span>
+              <button onClick={() => triggerTestNotification()}
+                className="p-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 font-bold flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md">
+                <Bell className="w-3.5 h-3.5" /> Trigger Alarm
               </button>
-              <button
-                onClick={() => setIsLockScreenOpen(true)}
-                className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-xs"
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Lockscreen</span>
+              <button onClick={() => setIsLockScreenOpen(true)}
+                className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-bold flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md">
+                <Smartphone className="w-3.5 h-3.5" /> Lockscreen
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={() => handleFastForward(30)}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-              >
-                <FastForward className="w-3.5 h-3.5 text-amber-300" />
-                <span>Clock +30m</span>
+              <button onClick={() => handleFastForward(30)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                <FastForward className="w-3.5 h-3.5 text-amber-300" /> Clock +30m
               </button>
-              <button
-                onClick={resetSimulatedTime}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-teal-300" />
-                <span>Real Clock</span>
+              <button onClick={resetSimulatedTime}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                <RotateCcw className="w-3.5 h-3.5 text-teal-300" /> Real Clock
               </button>
             </div>
 
             <div className="grid grid-cols-2 gap-1.5">
-              <button
-                onClick={triggerSimulatedEscalation}
-                className="p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>Escalation</span>
+              <button onClick={triggerSimulatedEscalation}
+                className="p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                <ShieldAlert className="w-3.5 h-3.5" /> Escalation
               </button>
-              <button
-                onClick={() => playReminderSound(settings.soundTheme)}
-                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 font-semibold flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-              >
-                <Volume2 className="w-3.5 h-3.5 text-emerald-300" />
-                <span>Chime Alert</span>
+              <button onClick={() => playReminderSound(settings.soundTheme)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+                <Volume2 className="w-3.5 h-3.5 text-emerald-300" /> Chime
               </button>
             </div>
 
-            {/* Footer drag instruction */}
-            <div className="pt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-white/10">
-              <span className="flex items-center gap-1 text-teal-300 font-medium">
-                <Move className="w-3 h-3" />
-                <span>Click & drag top bar anywhere</span>
+            <div className="pt-2 flex items-center justify-between border-t border-white/10 text-[10px] text-slate-400">
+              <span className="flex items-center gap-1 text-teal-300">
+                <GripVertical className="w-3 h-3" />
+                Drag dark bar to move
               </span>
-              <button
-                onClick={() => snapToCorner('bottom-left')}
-                className="text-teal-400 hover:underline cursor-pointer font-bold"
-              >
-                Reset Position
+              <button onClick={() => snapTo('bl')} className="text-teal-400 hover:underline cursor-pointer font-bold">
+                Reset
               </button>
             </div>
           </div>

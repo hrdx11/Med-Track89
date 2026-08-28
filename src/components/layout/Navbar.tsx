@@ -73,7 +73,7 @@ export const Navbar: React.FC = () => {
             {/* Custom 3D Teal M Emblem */}
             <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-white dark:bg-slate-800 border border-teal-500/30 p-1.5 shadow-md shadow-teal-500/15 flex items-center justify-center group-hover:scale-105 transition-transform overflow-hidden">
               <img
-                src="/logo-emblem.png"
+                src="/logo-512.png"
                 alt="MediTrack Logo Emblem"
                 className="w-full h-full object-contain"
               />
