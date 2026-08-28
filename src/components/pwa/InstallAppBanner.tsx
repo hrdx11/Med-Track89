@@ -29,7 +29,7 @@ export const InstallAppBanner: React.FC = () => {
         <div className="flex flex-col items-center gap-3">
           <div className="w-full rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 shadow-lg shadow-teal-500/10 p-4 sm:p-6">
             <img
-              src="/logo-full.png"
+              src="/MED_11.png"
               alt="MediTrack — Track • Manage • Live Better"
               className="w-full max-w-xs sm:max-w-sm mx-auto object-contain"
             />

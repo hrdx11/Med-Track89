@@ -75,9 +75,9 @@ export const Navbar: React.FC = () => {
             className="flex items-center cursor-pointer select-none group shrink-0"
           >
             <img
-              src="/logo-full.png"
+              src="/MED_11.png"
               alt="MediTrack — Track • Manage • Live Better"
-              className="h-12 sm:h-14 w-auto object-contain group-hover:scale-105 transition-transform"
+              className="h-10 sm:h-12 w-auto object-contain group-hover:scale-105 transition-transform"
             />
           </div>
 
