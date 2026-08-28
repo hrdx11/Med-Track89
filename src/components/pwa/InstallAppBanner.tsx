@@ -3,14 +3,11 @@ import { Modal } from '../ui/Modal'
 import { useMediTrack } from '../../context/MediTrackContext'
 import {
   Download,
-  Smartphone,
   CheckCircle2,
   Bell,
   ShieldAlert,
-  Zap,
   Share2,
-  PlusSquare,
-  X
+  PlusSquare
 } from 'lucide-react'
 
 export const InstallAppBanner: React.FC = () => {
@@ -27,25 +24,35 @@ export const InstallAppBanner: React.FC = () => {
       maxWidth="md"
       showCloseButton={true}
     >
-      <div className="text-center space-y-4">
-        {/* App Icon Banner — Actual Brand Logo */}
-        <div className="relative inline-flex items-center justify-center">
-          <img
-            src="/logo-512.png"
-            alt="MediTrack Logo"
-            className="w-24 h-24 rounded-3xl shadow-xl shadow-teal-500/30 animate-float-subtle object-contain"
-          />
+      <div className="text-center space-y-5">
+        {/* ══════ BRAND LOGO — Large & Prominent ══════ */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="p-2 rounded-3xl bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-950/40 dark:to-emerald-950/40 border border-teal-200/50 dark:border-teal-700/30 shadow-lg shadow-teal-500/15">
+            <img
+              src="/logo-512.png"
+              alt="MediTrack Brand Logo"
+              className="w-32 h-32 sm:w-40 sm:h-40 rounded-2xl object-contain animate-float-subtle"
+              onError={(e) => {
+                // Fallback if image fails to load
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
+            />
+          </div>
+
+          <div>
+            <span className="px-3 py-1 rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 font-bold text-xs border border-teal-500/30 uppercase tracking-wider">
+              Mobile & Desktop App Available
+            </span>
+          </div>
         </div>
 
         <div>
-          <span className="px-3 py-1 rounded-full bg-teal-500/15 text-teal-800 dark:text-teal-300 font-bold text-xs border border-teal-500/30 uppercase tracking-wider">
-            Mobile & Desktop App Available
-          </span>
-          <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-2">
+          <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Install MediTrack on Your Device
           </h3>
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1">
-            Enjoy instant offline reminders, lock-screen alarms, and 1-tap SOS dialing right from your home screen.
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed">
+            Get instant offline reminders, lock-screen alarms, and 1-tap SOS dialing right from your home screen.
           </p>
         </div>
 
@@ -84,7 +91,7 @@ export const InstallAppBanner: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               onClick={installApp}
               className="w-full py-3.5 px-6 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-sm shadow-lg shadow-teal-500/30 flex items-center justify-center gap-2 transition-transform active:scale-98 cursor-pointer animate-pulse-glow"
