@@ -230,7 +230,7 @@ export const INITIAL_HOSPITAL_DIRECTORY: HospitalDirectoryItem[] = [
 ]
 
 export const INITIAL_MEDICAL_ID: MedicalIdProfile = {
-  patientName: 'Devendra Sharma',
+  patientName: 'HRDX',
   age: 68,
   gender: 'Male',
   bloodGroup: 'B Positive (B+)',
@@ -283,8 +283,8 @@ export const INITIAL_SETTINGS: NotificationSettings = {
 
 export const INITIAL_USER: UserProfile = {
   id: 'usr-1',
-  name: 'Devendra Sharma',
-  email: 'devendra.sharma@example.com',
+  name: 'HRDX',
+  email: 'hrdx11@gmail.com',
   phone: '+91 98100 12345',
   role: 'patient',
   isLoggedIn: true,

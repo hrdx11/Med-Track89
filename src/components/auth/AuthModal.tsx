@@ -38,7 +38,7 @@ export const AuthModal: React.FC = () => {
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!email) return
-    login(email, role, name || (email.includes('ananya') ? 'Ananya Sharma' : 'Devendra Sharma'))
+    login(email, role, name || (email.includes('ananya') ? 'Ananya Sharma' : 'HRDX'))
   }
 
   const handleRegisterSubmit = (e: React.FormEvent) => {
@@ -110,10 +110,10 @@ export const AuthModal: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => login('devendra.sharma@example.com', 'patient', 'Devendra Sharma')}
+                onClick={() => login('hrdx11@gmail.com', 'patient', 'HRDX')}
                 className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:bg-teal-50 dark:hover:bg-teal-950/30 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <span>👴 Dad (Patient)</span>
+                <span>👴 HRDX (Patient)</span>
               </button>
               <button
                 type="button"
@@ -155,10 +155,10 @@ export const AuthModal: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => login('devendra.sharma@example.com', 'patient', 'Devendra Sharma')}
+                onClick={() => login('hrdx11@gmail.com', 'patient', 'HRDX')}
                 className="p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-center gap-1.5 hover:bg-teal-50 cursor-pointer"
               >
-                <span>👨‍🦳 Sign in as Patient (Devendra)</span>
+                <span>👨‍🦳 Sign in as Patient (HRDX)</span>
               </button>
               <button
                 type="button"
@@ -205,7 +205,7 @@ export const AuthModal: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Devendra Sharma"
+                    placeholder="e.g. HRDX"
                     value={name}
                     onChange={e => setName(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs focus:ring-2 focus:ring-teal-500"
@@ -223,7 +223,7 @@ export const AuthModal: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="name@example.com"
+                  placeholder="hrdx11@gmail.com"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 text-xs focus:ring-2 focus:ring-teal-500"

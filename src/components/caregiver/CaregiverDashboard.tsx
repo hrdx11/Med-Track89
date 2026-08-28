@@ -33,7 +33,7 @@ export const CaregiverDashboard: React.FC = () => {
 
   const { triggerSimulatedEscalation } = useNotifications()
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [selectedPatient, setSelectedPatient] = useState('devendra')
+  const [selectedPatient, setSelectedPatient] = useState('hrdx')
 
   const todayStr = simulatedTime.isSimulated
     ? simulatedTime.simulatedDateStr

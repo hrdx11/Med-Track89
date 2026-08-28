@@ -134,7 +134,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setActiveEscalation({
       medicine: med,
       scheduledTime: '08:00',
-      patientName: medicalId.patientName || 'Devendra Sharma',
+      patientName: medicalId.patientName || 'HRDX',
       elapsedMinutes: 52
     })
   }

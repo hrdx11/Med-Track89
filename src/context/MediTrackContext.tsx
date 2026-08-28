@@ -225,7 +225,7 @@ export const MediTrackProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => { saveStoredData(KEYS.USER, user) }, [user])
 
   // User Auth methods
-  const login = (email: string, role: 'patient' | 'caregiver' = 'patient', name: string = 'Devendra Sharma') => {
+  const login = (email: string, role: 'patient' | 'caregiver' = 'patient', name: string = 'HRDX') => {
     const updatedUser: UserProfile = {
       ...user,
       name,
